@@ -1,5 +1,5 @@
 /* TimeMark - Service Worker */
-const CACHE = 'timemark-v1';
+const CACHE = 'timemark-v2';
 const ASSETS = [
   './',
   './index.html',
