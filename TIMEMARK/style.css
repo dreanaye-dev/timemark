@@ -97,7 +97,7 @@ body {
 }
 
 #wm-clock {
-  font-size: clamp(44px, 12vw, 68px);
+  font-size: clamp(28px, 7.5vw, 44px);
   font-weight: 700;
   line-height: 1;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75);
@@ -189,6 +189,8 @@ body {
 }
 
 .gps-dot.live { background: var(--ok); box-shadow: 0 0 8px var(--ok); animation: gpspulse 2s infinite; }
+.gps-dot.fair { background: #ffc93c; box-shadow: 0 0 6px rgba(255, 201, 60, 0.8); }
+.gps-dot.warn { background: #ff5a4a; box-shadow: 0 0 6px rgba(255, 90, 74, 0.8); }
 .gps-dot.error { background: #ff5a4a; }
 
 @keyframes gpspulse {
