@@ -552,72 +552,104 @@ async function startRecord() {
       toastShow('Kamera belum siap, tunggu sebentar');
       return;
     }
-  const canvas = state.burnCanvas;
-  canvas.width = vw;
-  canvas.height = vh;
-  const ctx = canvas.getContext('2d');
-
-  const drawFrame = () => {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, vw, vh);
-    ctx.drawImage(video, 0, 0, vw, vh);
-    drawWatermark(ctx, vw, vh, wmData());
-    state.rafId = requestAnimationFrame(drawFrame);
-  };
-  drawFrame();
-
-  const fps = 30;
-  const outStream = canvas.captureStream(fps);
-  const audioTracks = state.stream.getAudioTracks();
-  if (audioTracks.length) outStream.addTrack(audioTracks[0]);
-
-  const mime = pickMime();
-  const opts = {};
-  if (mime) opts.mimeType = mime;
-  if (mime && mime.includes('video/webm')) {
-    opts.videoBitsPerSecond = 8000000;
-  }
-
-  try {
-    state.recorder = new MediaRecorder(outStream, opts);
-  } catch (e) {
-    cancelAnimationFrame(state.rafId);
-    toastShow('Perekaman tidak didukung browser ini');
-    return;
-  }
-
-  const chunks = [];
-  state.recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-  state.recorder.onstop = async () => {
-    cancelAnimationFrame(state.rafId);
-    const type = (mime ? mime.split(';')[0] : 'video/webm');
-    const blob = new Blob(chunks, { type });
-    state.recording = false;
-    recBadge.hidden = true;
-    btnRecord.classList.remove('recording');
-    btnCapture.disabled = false;
-    if (blob.size > 0) {
-      await saveMedia({ type: 'video', blob, meta: state.recMeta });
-      toastShow('Video tersimpan');
-    } else {
-      toastShow('Rekaman gagal');
+    if (typeof HTMLCanvasElement.prototype.captureStream !== 'function') {
+      toastShow('Browser ini tidak mendukung perekaman watermark');
+      return;
     }
-  };
-  state.recorder.onerror = () => {
-    cancelAnimationFrame(state.rafId);
-    state.recording = false;
-    recBadge.hidden = true;
-    btnRecord.classList.remove('recording');
-    btnCapture.disabled = false;
-    toastShow('Terjadi kesalahan saat merekam');
-  };
 
-  state.recMeta = wmData();
-  state.recorder.start(250);
-  state.recording = true;
-  recBadge.hidden = false;
-  btnRecord.classList.add('recording');
-  btnCapture.disabled = true;
+    /* Rekam di resolusi ringan (maks 1280x720) agar mulus di HP */
+    const MAX_W = 1280;
+    const MAX_H = 720;
+    let recW = vw;
+    let recH = vh;
+    if (recW > MAX_W || recH > MAX_H) {
+      const scale = Math.min(MAX_W / recW, MAX_H / recH);
+      recW = Math.round(recW * scale);
+      recH = Math.round(recH * scale);
+    }
+    if ((recW % 2) !== 0) recW -= 1;
+    if ((recH % 2) !== 0) recH -= 1;
+
+    const canvas = state.burnCanvas;
+    canvas.width = recW;
+    canvas.height = recH;
+    const ctx = canvas.getContext('2d');
+
+    /* Layer watermark di-render hanya setiap ~250ms, bukan tiap frame */
+    const wmLayer = document.createElement('canvas');
+    wmLayer.width = recW;
+    wmLayer.height = recH;
+    const wmCtx = wmLayer.getContext('2d');
+    let lastWm = 0;
+    const renderWm = () => {
+      const now = Date.now();
+      if (now - lastWm < 250) return;
+      lastWm = now;
+      wmCtx.clearRect(0, 0, recW, recH);
+      drawWatermark(wmCtx, recW, recH, wmData());
+    };
+    renderWm();
+
+    const drawFrame = () => {
+      ctx.drawImage(video, 0, 0, recW, recH);
+      renderWm();
+      ctx.drawImage(wmLayer, 0, 0, recW, recH);
+      state.rafId = requestAnimationFrame(drawFrame);
+    };
+    drawFrame();
+
+    const fps = 24;
+    const outStream = canvas.captureStream(fps);
+    const audioTracks = state.stream.getAudioTracks();
+    if (audioTracks.length) outStream.addTrack(audioTracks[0]);
+
+    const mime = pickMime();
+    const opts = {};
+    if (mime) opts.mimeType = mime;
+    if (mime && mime.includes('video/webm')) {
+      opts.videoBitsPerSecond = 6000000;
+    }
+
+    try {
+      state.recorder = new MediaRecorder(outStream, opts);
+    } catch (e) {
+      cancelAnimationFrame(state.rafId);
+      toastShow('Perekaman tidak didukung browser ini');
+      return;
+    }
+
+    const chunks = [];
+    state.recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    state.recorder.onstop = async () => {
+      cancelAnimationFrame(state.rafId);
+      const type = (mime ? mime.split(';')[0] : 'video/webm');
+      const blob = new Blob(chunks, { type });
+      state.recording = false;
+      recBadge.hidden = true;
+      btnRecord.classList.remove('recording');
+      btnCapture.disabled = false;
+      if (blob.size > 0) {
+        await saveMedia({ type: 'video', blob, meta: state.recMeta });
+        toastShow('Video tersimpan');
+      } else {
+        toastShow('Rekaman gagal');
+      }
+    };
+    state.recorder.onerror = () => {
+      cancelAnimationFrame(state.rafId);
+      state.recording = false;
+      recBadge.hidden = true;
+      btnRecord.classList.remove('recording');
+      btnCapture.disabled = false;
+      toastShow('Terjadi kesalahan saat merekam');
+    };
+
+    state.recMeta = wmData();
+    state.recorder.start(250);
+    state.recording = true;
+    recBadge.hidden = false;
+    btnRecord.classList.add('recording');
+    btnCapture.disabled = true;
   } catch (err) {
     cancelAnimationFrame(state.rafId);
     console.error('startRecord error:', err);
