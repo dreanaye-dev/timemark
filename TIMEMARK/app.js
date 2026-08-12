@@ -36,6 +36,7 @@ const galleryEmpty = $('gallery-empty');
 const galleryError = $('gallery-error');
 const modal = $('modal');
 const modalBackdrop = $('modal-backdrop');
+const modalClose = $('modal-close');
 const modalImg = $('modal-img');
 const modalVideo = $('modal-video');
 const modalMeta = $('modal-meta');
@@ -881,9 +882,18 @@ function openModal(item) {
 
   window._currentModalItem = item;
   modal.hidden = false;
+  pushModalHistory();
 }
 
-function closeModal() {
+function pushModalHistory() {
+  if (state.modalHistory) return;
+  try {
+    history.pushState({ tm: 1 }, '');
+    state.modalHistory = true;
+  } catch (e) { /* abaikan */ }
+}
+
+function hideModal() {
   modal.hidden = true;
   if (modalVideo.hidden === false) {
     modalVideo.pause();
@@ -892,6 +902,21 @@ function closeModal() {
   }
   state.currentModalId = null;
 }
+
+function closeModal() {
+  if (state.modalHistory) {
+    state.modalHistory = false;
+    try { history.back(); } catch (e) { /* abaikan */ }
+  }
+  hideModal();
+}
+
+window.addEventListener('popstate', () => {
+  if (!modal.hidden) {
+    state.modalHistory = false;
+    hideModal();
+  }
+});
 
 function filenameFor(item) {
   const ext = item.type === 'photo' ? 'jpg' : (item.meta && item.meta.time ? 'mp4' : 'webm');
@@ -1195,6 +1220,7 @@ permBtn.addEventListener('click', async () => {
   await initCamera();
 });
 modalBackdrop.addEventListener('click', closeModal);
+modalClose.addEventListener('click', closeModal);
 modalDownload.addEventListener('click', downloadCurrent);
 modalShare.addEventListener('click', shareCurrent);
 modalDelete.addEventListener('click', deleteCurrent);
