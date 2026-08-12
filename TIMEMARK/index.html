@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f14">
+  <meta name="description" content="TimeMark - Foto & rekam video dengan watermark lokasi, waktu, tanggal, dan koordinat GPS.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TimeMark">
+  <title>TimeMark</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===================== KAMERA ===================== -->
+  <main id="camera-view">
+    <video id="video" autoplay playsinline muted></video>
+
+    <!-- Watermark overlay live di layar kamera -->
+    <div id="watermark">
+      <div class="wm-top">
+        <span class="wm-brand">TIMEMARK</span>
+        <span class="wm-coords-top">
+          <svg viewBox="0 0 24 24" class="ic16"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+          <span id="wm-coords">--.------, --.------</span>
+        </span>
+      </div>
+      <div class="wm-bottom">
+        <div id="wm-clock">--:--:--</div>
+        <div id="wm-date">--</div>
+        <div class="wm-loc">
+          <svg viewBox="0 0 24 24" class="ic16"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+          <span id="wm-location">Mencari lokasi...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Indikator perekaman -->
+    <div id="rec-badge" hidden>
+      <span class="rec-dot"></span> REC
+    </div>
+
+    <!-- Status GPS -->
+    <div id="gps-pill">
+      <span class="gps-dot" id="gps-dot"></span> GPS
+    </div>
+
+    <!-- Banner izin -->
+    <div id="perm-banner" hidden>
+      <p>Izinkan akses <b>kamera</b> dan <b>lokasi</b> untuk mulai menggunakan TimeMark.</p>
+      <button id="perm-btn">Izinkan Akses</button>
+    </div>
+
+    <!-- Kontrol kamera -->
+    <div id="controls">
+      <button id="btn-flash" class="btn btn-side" title="Lampu">
+        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+      </button>
+      <button id="btn-capture" class="capture-btn" title="Ambil Foto">
+        <span class="capture-inner"></span>
+      </button>
+      <div class="right-group">
+        <button id="btn-gallery" class="btn btn-side" title="Galeri">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+        </button>
+        <button id="btn-switch" class="btn btn-side" title="Ganti Kamera">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 4h-3.17L15 2H9L7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
+        </button>
+      </div>
+      <button id="btn-record" class="record-btn" title="Rekam Video">
+        <span class="record-inner"></span>
+      </button>
+    </div>
+  </main>
+
+  <!-- ===================== GALERI ===================== -->
+  <main id="gallery-view" hidden>
+    <header class="gal-header">
+      <button id="btn-back-cam" class="btn btn-side" title="Kembali ke Kamera">
+        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      </button>
+      <h1>Galeri</h1>
+      <button id="btn-install" class="btn btn-side" title="Instal Aplikasi" hidden>
+        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 12v7H5v-7H3v9h18v-9zm-6-7v8.17l3.59-3.58L18 11l-6 6-6-6 1.41-1.41L11 13.17V4z"/></svg>
+      </button>
+    </header>
+    <nav class="gal-toolbar">
+      <button id="btn-export-all" class="tool-btn">Ekspor</button>
+      <button id="btn-history" class="tool-btn">Riwayat Lokasi</button>
+      <label class="tool-toggle" title="Tampilkan milidetik di watermark">
+        <span>Milidetik</span>
+        <input type="checkbox" id="chk-ms">
+      </label>
+    </nav>
+    <section id="gallery-grid"></section>
+    <p id="gallery-empty" hidden>Belum ada hasil. Ambil foto atau rekam video dari kamera.</p>
+    <p id="gallery-error" hidden>Gagal memuat galeri.</p>
+  </main>
+
+  <!-- ===================== RIWAYAT LOKASI ===================== -->
+  <main id="history-view" hidden>
+    <header class="gal-header">
+      <button id="btn-back-gal" class="btn btn-side" title="Kembali ke Galeri">
+        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      </button>
+      <h1>Riwayat Lokasi</h1>
+      <button id="btn-clear-locs" class="btn btn-side danger-text" title="Hapus semua riwayat">
+        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>
+    </header>
+    <nav class="gal-toolbar">
+      <button id="btn-export-locs-csv" class="tool-btn">Ekspor CSV</button>
+      <button id="btn-export-locs-json" class="tool-btn">Ekspor JSON</button>
+    </nav>
+    <section id="history-list"></section>
+    <p id="history-empty" hidden>Belum ada riwayat lokasi. Buka kamera dan biarkan GPS aktif.</p>
+  </main>
+
+  <!-- ===================== MODAL DETAIL ===================== -->
+  <div id="modal" hidden>
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-box">
+      <div class="modal-media">
+        <img id="modal-img" hidden alt="Hasil">
+        <video id="modal-video" hidden controls playsinline></video>
+      </div>
+      <div class="modal-meta" id="modal-meta"></div>
+      <div class="modal-actions">
+        <button id="modal-download" class="action-btn">Unduh</button>
+        <button id="modal-share" class="action-btn">Bagikan</button>
+        <button id="modal-export" class="action-btn">Ekspor</button>
+        <button id="modal-delete" class="action-btn danger">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
