@@ -12,10 +12,11 @@ const video = $('video');
 const elClock = $('wm-clock');
 const elDate = $('wm-date');
 const elCoords = $('wm-coords');
+const elAcc = $('wm-acc');
 const elLocation = $('wm-location');
 const recBadge = $('rec-badge');
+const recTimer = $('rec-timer');
 const gpsDot = $('gps-dot');
-const gpsPill = $('gps-pill');
 const permBanner = $('perm-banner');
 const permBtn = $('perm-btn');
 const controls = $('controls');
@@ -67,6 +68,8 @@ const state = {
   addressShort: 'Mencari lokasi...',
   watchId: null,
   recMeta: null,
+  recStart: 0,
+  recTimerId: null,
   currentModalId: null,
   deferredPrompt: null,
   showMs: false,
@@ -117,6 +120,14 @@ function updateOverlay() {
   if (elCoords.textContent !== coordsText) elCoords.textContent = coordsText;
   const locText = d.addressShort || 'Lokasi belum ditemukan';
   if (elLocation.textContent !== locText) elLocation.textContent = locText;
+  if (elAcc) {
+    if (state.coords && state.coords.accuracy != null) {
+      elAcc.textContent = `(±${Math.round(state.coords.accuracy)} m)`;
+      elAcc.hidden = false;
+    } else {
+      elAcc.hidden = true;
+    }
+  }
 }
 setInterval(updateOverlay, 50);
 updateOverlay();
@@ -646,6 +657,7 @@ async function startRecord() {
       recBadge.hidden = true;
       btnRecord.classList.remove('recording');
       btnCapture.disabled = false;
+      stopRecTimer();
       if (blob.size > 0) {
         await saveMedia({ type: 'video', blob, meta: state.recMeta });
         toastShow('Video tersimpan');
@@ -653,21 +665,23 @@ async function startRecord() {
         toastShow('Rekaman gagal');
       }
     };
-    state.recorder.onerror = () => {
-      cancelAnimationFrame(state.rafId);
-      state.recording = false;
-      recBadge.hidden = true;
-      btnRecord.classList.remove('recording');
-      btnCapture.disabled = false;
-      toastShow('Terjadi kesalahan saat merekam');
-    };
+state.recorder.onerror = () => {
+    cancelAnimationFrame(state.rafId);
+    state.recording = false;
+    recBadge.hidden = true;
+    btnRecord.classList.remove('recording');
+    btnCapture.disabled = false;
+    stopRecTimer();
+    toastShow('Terjadi kesalahan saat merekam');
+  };
 
-    state.recMeta = wmData();
-    state.recorder.start(250);
-    state.recording = true;
-    recBadge.hidden = false;
-    btnRecord.classList.add('recording');
-    btnCapture.disabled = true;
+  state.recMeta = wmData();
+  state.recorder.start(250);
+  state.recording = true;
+  recBadge.hidden = false;
+  btnRecord.classList.add('recording');
+  btnCapture.disabled = true;
+  startRecTimer();
   } catch (err) {
     cancelAnimationFrame(state.rafId);
     console.error('startRecord error:', err);
@@ -682,6 +696,25 @@ function stopRecord() {
   } catch (e) {
     /* abaikan */
   }
+}
+
+function startRecTimer() {
+  stopRecTimer();
+  state.recStart = Date.now();
+  state.recTimerId = setInterval(() => {
+    const s = Math.max(0, Math.floor((Date.now() - state.recStart) / 1000));
+    const mm = String(Math.floor(s / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    if (recTimer.textContent !== `${mm}:${ss}`) recTimer.textContent = `${mm}:${ss}`;
+  }, 500);
+}
+
+function stopRecTimer() {
+  if (state.recTimerId != null) {
+    clearInterval(state.recTimerId);
+    state.recTimerId = null;
+  }
+  if (recTimer) recTimer.textContent = '00:00';
 }
 
 async function toggleRecord() {
@@ -1104,6 +1137,7 @@ window.addEventListener('pagehide', () => {
   if (state.recording && state.recorder && state.recorder.state !== 'inactive') {
     try { state.recorder.stop(); } catch (e) { /* ignore */ }
   }
+  stopRecTimer();
   stopStream();
   if (state.watchId != null) navigator.geolocation.clearWatch(state.watchId);
 });
