@@ -87,6 +87,26 @@ function shortAddress(full) {
   return parts.slice(0, 3).join(', ');
 }
 
+/* Susun alamat lengkap & rapi dari hasil reverse-geocoding (Nominatim) */
+function formatFullAddress(data) {
+  const a = data.address || {};
+  const parts = [];
+  if (a.road) parts.push(a.road);
+  if (a.suburb) parts.push(a.suburb);
+  else if (a.neighbourhood) parts.push(a.neighbourhood);
+  else if (a.quarter) parts.push(a.quarter);
+  else if (a.city_district) parts.push(a.city_district);
+  else if (a.district) parts.push(a.district);
+  const area = a.city || a.town || a.village || a.municipality;
+  if (area) parts.push(area);
+  if (a.state_district && a.state_district !== area) parts.push(a.state_district);
+  if (a.state && a.state !== a.state_district) parts.push(a.state);
+  if (a.postcode) parts.push(a.postcode);
+  if (a.country && String(a.country).toLowerCase() !== 'indonesia') parts.push(a.country);
+  const seen = new Set();
+  return parts.filter((p) => p && !seen.has(p) && seen.add(p)).join(', ');
+}
+
 function wmData(coords, address) {
   const now = new Date();
   const c = coords || state.coords;
@@ -120,7 +140,7 @@ function updateOverlay() {
   if (elDate.textContent !== dateText) elDate.textContent = dateText;
   const coordsText = d.coords;
   if (elCoords.textContent !== coordsText) elCoords.textContent = coordsText;
-  const locText = d.addressShort || 'Lokasi belum ditemukan';
+  const locText = d.address || 'Lokasi belum ditemukan';
   if (elLocation.textContent !== locText) elLocation.textContent = locText;
   if (elAcc) {
     if (state.coords && state.coords.accuracy != null) {
@@ -175,8 +195,8 @@ async function reverseGeocode(lat, lng) {
     if (!res.ok) throw new Error('geo fail');
     const data = await res.json();
     if (data && data.display_name) {
-      state.address = data.display_name;
-      const short = shortAddress(data.display_name);
+      state.address = formatFullAddress(data);
+      const short = shortAddress(state.address);
       if (short) state.addressShort = short;
       updateOverlay();
     }
@@ -330,7 +350,7 @@ function drawWatermark(ctx, w, h, d) {
 
   ctx.save();
 
-  const locText = 'Lokasi: ' + (d.addressShort || d.address || 'Lokasi tidak ditemukan');
+  const locText = 'Lokasi: ' + (d.address || d.addressShort || 'Lokasi tidak ditemukan');
   const lines = wrapText(locText, ctx, subSize, w - pad * 2);
   const lineStep = subSize * 1.45;
 
