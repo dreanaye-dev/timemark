@@ -220,10 +220,10 @@ function stopStream() {
 
 async function initCamera() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    permBanner.hidden = false;
-    permBanner.querySelector('p').innerHTML =
-      'Browser Anda tidak mendukung akses kamera. Gunakan Chrome/Edge terbaru.';
-    permBtn.hidden = true;
+    showPermMessage(
+      'Browser Anda tidak mendukung akses kamera.<br><b>Gunakan Chrome/Edge terbaru</b> dan pastikan alamat dimulai dengan <b>https://</b>.',
+      false
+    );
     return;
   }
   try {
@@ -237,8 +237,7 @@ async function initCamera() {
         video: { facingMode: { ideal: state.facing }, width: { ideal: 1280 }, height: { ideal: 720 } },
       });
     } catch (err2) {
-      permBanner.hidden = false;
-      permBtn.hidden = false;
+      showCameraError(err2);
       return;
     }
   }
@@ -248,6 +247,30 @@ async function initCamera() {
   await video.play().catch(() => {});
   checkFlashSupport();
   startGeo();
+}
+
+function showPermMessage(html, showBtn) {
+  permBanner.querySelector('p').innerHTML = html;
+  permBtn.hidden = !showBtn;
+  permBanner.hidden = false;
+}
+
+function showCameraError(err) {
+  const name = (err && err.name) || '';
+  let msg = 'Gagal mengakses kamera. Coba klik tombol lagi.<br>Jika tetap tidak muncul, buka <b>https://</b> (bukan http).';
+  let showBtn = true;
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+    msg = 'Izin kamera <b>ditolak / belum aktif</b>.<br><br>Perbaiki: buka <b>ikon kunci/&#9432; di address bar</b> browser &rarr; <b>Site settings</b> &rarr; izinkan <b>Kamera</b> & <b>Mikrofon/Lokasi</b> &rarr; refresh halaman.';
+  } else if (name === 'NotFoundError') {
+    msg = '<b>Tidak ada kamera terdeteksi.</b><br>Di HP periksa izin dan pastikan kamera tidak dipakai aplikasi lain; di PC pastikan webcam menyala.';
+    showBtn = false;
+  } else if (name === 'NotReadableError') {
+    msg = '<b>Kamera sedang dipakai aplikasi lain</b> (mis. panggilan video). Tutup aplikasi itu lalu coba lagi.';
+  } else if (name === 'SecurityError') {
+    msg = 'Browser memblokir kamera.<br>Pastikan alamat dimulai <b>https://</b> dan coba lagi.';
+    showBtn = false;
+  }
+  showPermMessage(msg, showBtn);
 }
 
 async function switchCamera() {
