@@ -494,6 +494,26 @@ body {
 /* ================= MODAL ================= */
 #modal { position: fixed; inset: 0; z-index: 30; }
 
+.modal-close {
+  position: absolute;
+  top: calc(14px + var(--safe-top));
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(15, 20, 28, 0.7);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.modal-close svg { width: 22px; height: 22px; }
+.modal-close:active { transform: scale(0.92); }
+
 .modal-backdrop {
   position: absolute;
   inset: 0;
