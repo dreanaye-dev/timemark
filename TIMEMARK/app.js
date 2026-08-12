@@ -497,29 +497,34 @@ function flashEffect() {
 
 async function capturePhoto() {
   if (state.recording) return;
-  const vw = video.videoWidth;
-  const vh = video.videoHeight;
-  if (!vw || !vh) {
-    toastShow('Kamera belum siap');
-    return;
-  }
-  const canvas = document.createElement('canvas');
-  canvas.width = vw;
-  canvas.height = vh;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, vw, vh);
+  try {
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) {
+      toastShow('Kamera belum siap, tunggu sebentar');
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = vw;
+    canvas.height = vh;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, vw, vh);
 
-  const d = wmData();
-  drawWatermark(ctx, vw, vh, d);
+    const d = wmData();
+    drawWatermark(ctx, vw, vh, d);
 
-  const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.92));
-  flashEffect();
-  if (!blob) {
-    toastShow('Gagal menyimpan foto');
-    return;
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.92));
+    flashEffect();
+    if (!blob) {
+      toastShow('Gagal menyimpan foto');
+      return;
+    }
+    await saveMedia({ type: 'photo', blob, meta: d });
+    toastShow('Foto tersimpan');
+  } catch (err) {
+    console.error('capturePhoto error:', err);
+    toastShow('Gagal mengambil foto (' + (err && err.name ? err.name : 'error') + ')');
   }
-  await saveMedia({ type: 'photo', blob, meta: d });
-  toastShow('Foto tersimpan');
 }
 
 /* ---------------- Video dengan watermark ---------------- */
@@ -540,12 +545,13 @@ function pickMime() {
 
 async function startRecord() {
   if (!state.stream || state.recording) return;
-  const vw = video.videoWidth;
-  const vh = video.videoHeight;
-  if (!vw || !vh) {
-    toastShow('Kamera belum siap');
-    return;
-  }
+  try {
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) {
+      toastShow('Kamera belum siap, tunggu sebentar');
+      return;
+    }
   const canvas = state.burnCanvas;
   canvas.width = vw;
   canvas.height = vh;
@@ -612,6 +618,11 @@ async function startRecord() {
   recBadge.hidden = false;
   btnRecord.classList.add('recording');
   btnCapture.disabled = true;
+  } catch (err) {
+    cancelAnimationFrame(state.rafId);
+    console.error('startRecord error:', err);
+    toastShow('Gagal merekam (' + (err && err.name ? err.name : 'error') + ')');
+  }
 }
 
 function stopRecord() {

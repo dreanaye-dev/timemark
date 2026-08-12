@@ -150,6 +150,8 @@ body {
   z-index: 5;
 }
 
+#rec-badge[hidden] { display: none; }
+
 .rec-dot {
   width: 11px;
   height: 11px;
@@ -205,6 +207,8 @@ body {
   text-align: center;
   padding: 32px;
 }
+
+#perm-banner[hidden] { display: none; }
 
 #perm-banner p { font-size: 15px; line-height: 1.6; color: var(--muted); max-width: 320px; }
 #perm-banner b { color: var(--text); }
