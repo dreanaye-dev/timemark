@@ -17,6 +17,8 @@ const elLocation = $('wm-location');
 const recBadge = $('rec-badge');
 const recTimer = $('rec-timer');
 const gpsDot = $('gps-dot');
+const gpsText = $('gps-text');
+const GPS_LIMIT_M = 30; /* ambang akurasi minimum untuk bukti */
 const permBanner = $('perm-banner');
 const permBtn = $('perm-btn');
 const controls = $('controls');
@@ -131,6 +133,37 @@ function toastShow(msg, ms = 1800) {
   toast._t = setTimeout(() => { toast.hidden = true; }, ms);
 }
 
+/* Status pill GPS: teks akurasi + warna indikator */
+function updateGpsPill() {
+  const c = state.coords;
+  gpsDot.classList.remove('live', 'fair', 'warn', 'error');
+  if (!c || c.accuracy == null) {
+    gpsText.textContent = 'GPS mencari...';
+    gpsDot.classList.add('error');
+    return;
+  }
+  gpsText.textContent = `GPS ±${Math.round(c.accuracy)} m`;
+  if (c.accuracy <= 8) {
+    gpsDot.classList.add('live');
+  } else if (c.accuracy <= GPS_LIMIT_M) {
+    gpsDot.classList.add('fair');
+  } else {
+    gpsDot.classList.add('warn');
+  }
+}
+
+/* Peringatan bila akurasi GPS masih di bawah standar (penting utk bukti) */
+function gpsReadyForCapture() {
+  const c = state.coords;
+  if (!c || c.accuracy == null) {
+    return confirm('Lokasi GPS belum terkunci.\n\nTetap ambil tanpa koordinat?');
+  }
+  if (c.accuracy > GPS_LIMIT_M) {
+    return confirm(`Akurasi GPS masih rendah (±${Math.round(c.accuracy)} m).\n\nTetap ambil bukti?`);
+  }
+  return true;
+}
+
 /* ---------------- Overlay waktu ---------------- */
 function updateOverlay() {
   const d = wmData();
@@ -168,15 +201,14 @@ function startGeo() {
         longitude: pos.coords.longitude,
         accuracy: pos.coords.accuracy,
       };
-      gpsDot.classList.add('live');
-      gpsDot.classList.remove('error');
+      updateGpsPill();
       recordLocation(state.coords);
       reverseGeocode(pos.coords.latitude, pos.coords.longitude);
       updateOverlay();
     },
     (err) => {
-      gpsDot.classList.add('error');
-      gpsDot.classList.remove('live');
+      state.coords = null;
+      updateGpsPill();
       if (err.code === err.PERMISSION_DENIED) {
         elLocation.textContent = 'Izin lokasi ditolak';
         elCoords.textContent = 'GPS nonaktif';
@@ -560,6 +592,7 @@ async function capturePhoto() {
       toastShow('Kamera belum siap, tunggu sebentar');
       return;
     }
+    if (!gpsReadyForCapture()) return;
     const canvas = document.createElement('canvas');
     canvas.width = vw;
     canvas.height = vh;
@@ -612,6 +645,7 @@ async function startRecord() {
       toastShow('Kamera belum siap, tunggu sebentar');
       return;
     }
+    if (!gpsReadyForCapture()) return;
     if (typeof HTMLCanvasElement.prototype.captureStream !== 'function') {
       toastShow('Browser ini tidak mendukung perekaman watermark');
       return;
@@ -1203,6 +1237,7 @@ window.addEventListener('pagehide', () => {
 (async function init() {
   setupInstall();
   registerSW();
+  updateGpsPill();
   state.showMs = localStorage.getItem('tm_showMs') === '1';
   chkMs.checked = state.showMs;
   state.autoSave = localStorage.getItem('tm_autoSave') === '1';
