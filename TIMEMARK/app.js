@@ -385,6 +385,29 @@ function wrapText(text, ctx, fontSize, maxWidth) {
   return lines;
 }
 
+/* aksen bingkai kamera (sudut + garis tepi tipis) — digambar sekali */
+function drawFrameAccents(ctx, w, h) {
+  ctx.save();
+  const m = Math.max(3, Math.round(w * 0.008));
+  const s = Math.max(8, Math.round(w * 0.022));
+  const lw = Math.max(2, Math.round(w * 0.002));
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.lineWidth = lw;
+  const corners = [[m, m, 1, 1], [w - m, m, -1, 1], [m, h - m, 1, -1], [w - m, h - m, -1, -1]];
+  for (const [cx, cy, dx, dy] of corners) {
+    ctx.beginPath();
+    ctx.moveTo(cx + dx * s, cy);
+    ctx.lineTo(cx, cy);
+    ctx.lineTo(cx, cy + dy * s);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.lineWidth = Math.max(1, lw - 1);
+  ctx.strokeRect(m, m, w - m * 2, h - m * 2);
+  ctx.restore();
+}
+
 /* ---------------- IndexedDB ---------------- */
 let dbPromise = null;
 
@@ -557,9 +580,9 @@ async function startRecord() {
       return;
     }
 
-    /* Rekam di resolusi ringan (maks 1280x720) agar mulus di HP */
-    const MAX_W = 1280;
-    const MAX_H = 720;
+    /* Resolusi rekaman: naik ke maks 1080p karena watermark statis (ringan) */
+    const MAX_W = 1920;
+    const MAX_H = 1080;
     let recW = vw;
     let recH = vh;
     if (recW > MAX_W || recH > MAX_H) {
@@ -575,24 +598,19 @@ async function startRecord() {
     canvas.height = recH;
     const ctx = canvas.getContext('2d');
 
-    /* Layer watermark di-render hanya setiap ~250ms, bukan tiap frame */
+    /* Bingkai watermark STATIS: digambar SEKALI saat mulai merekam.
+       Data diambil sekali (waktu mulai, tanggal, koordinat, alamat),
+       sehingga tidak pernah di-render ulang tiap frame. */
     const wmLayer = document.createElement('canvas');
     wmLayer.width = recW;
     wmLayer.height = recH;
     const wmCtx = wmLayer.getContext('2d');
-    let lastWm = 0;
-    const renderWm = () => {
-      const now = Date.now();
-      if (now - lastWm < 250) return;
-      lastWm = now;
-      wmCtx.clearRect(0, 0, recW, recH);
-      drawWatermark(wmCtx, recW, recH, wmData());
-    };
-    renderWm();
+    const staticData = wmData();
+    drawWatermark(wmCtx, recW, recH, staticData);
+    drawFrameAccents(wmCtx, recW, recH);
 
     const drawFrame = () => {
       ctx.drawImage(video, 0, 0, recW, recH);
-      renderWm();
       ctx.drawImage(wmLayer, 0, 0, recW, recH);
       state.rafId = requestAnimationFrame(drawFrame);
     };
