@@ -45,6 +45,7 @@ const galleryToolbar = document.querySelector('.gal-toolbar');
 const btnExportAll = $('btn-export-all');
 const btnHistory = $('btn-history');
 const chkMs = $('chk-ms');
+const chkAuto = $('chk-autosave');
 const historyView = $('history-view');
 const btnBackGal = $('btn-back-gal');
 const btnClearLocs = $('btn-clear-locs');
@@ -76,6 +77,7 @@ const state = {
   lastLocAt: 0,
   lastLocLat: null,
   lastLocLng: null,
+  autoSave: false,
 };
 
 /* ---------------- Pembantu ---------------- */
@@ -553,8 +555,12 @@ async function capturePhoto() {
       toastShow('Gagal menyimpan foto');
       return;
     }
-    await saveMedia({ type: 'photo', blob, meta: d });
+    const rec = await saveMedia({ type: 'photo', blob, meta: d });
     toastShow('Foto tersimpan');
+    if (state.autoSave) {
+      downloadMedia(blob, mediaFilename('photo', rec.createdAt));
+      toastShow('Foto tersimpan & diunduh');
+    }
   } catch (err) {
     console.error('capturePhoto error:', err);
     toastShow('Gagal mengambil foto (' + (err && err.name ? err.name : 'error') + ')');
@@ -659,8 +665,12 @@ async function startRecord() {
       btnCapture.disabled = false;
       stopRecTimer();
       if (blob.size > 0) {
-        await saveMedia({ type: 'video', blob, meta: state.recMeta });
+        const rec = await saveMedia({ type: 'video', blob, meta: state.recMeta });
         toastShow('Video tersimpan');
+        if (state.autoSave) {
+          downloadMedia(blob, mediaFilename('video', rec.createdAt, mime));
+          toastShow('Video tersimpan & diunduh');
+        }
       } else {
         toastShow('Rekaman gagal');
       }
@@ -914,6 +924,26 @@ function downloadBlob(content, filename, type) {
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
+/* Unduh file media ke penyimpanan HP/galeri HP */
+function downloadMedia(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+function mediaFilename(type, createdAt, mime) {
+  const ext = type === 'photo'
+    ? 'jpg'
+    : (mime && String(mime).toLowerCase().includes('mp4') ? 'mp4' : 'webm');
+  return `timemark-${createdAt}.${ext}`;
+}
+
 function metaToJson(item) {
   const m = item.meta || {};
   return {
@@ -1125,8 +1155,15 @@ btnExportLocsJson.addEventListener('click', () => exportLocs('json'));
 
 chkMs.addEventListener('change', () => {
   state.showMs = chkMs.checked;
+  localStorage.setItem('tm_showMs', state.showMs ? '1' : '0');
   updateOverlay();
   toastShow(state.showMs ? 'Milidetik aktif' : 'Milidetik nonaktif');
+});
+
+chkAuto.addEventListener('change', () => {
+  state.autoSave = chkAuto.checked;
+  localStorage.setItem('tm_autoSave', state.autoSave ? '1' : '0');
+  toastShow(state.autoSave ? 'Auto-Simpan ke HP aktif' : 'Auto-Simpan ke HP nonaktif');
 });
 
 document.addEventListener('keydown', (e) => {
@@ -1146,6 +1183,10 @@ window.addEventListener('pagehide', () => {
 (async function init() {
   setupInstall();
   registerSW();
+  state.showMs = localStorage.getItem('tm_showMs') === '1';
+  chkMs.checked = state.showMs;
+  state.autoSave = localStorage.getItem('tm_autoSave') === '1';
+  chkAuto.checked = state.autoSave;
   try {
     await renderGallery();
   } catch (e) {
