@@ -63,6 +63,9 @@ const selGeocoder = $('sel-geocoder');
 const inpGeoapifyKey = $('inp-geoapify-key');
 const btnSaveSettings = $('btn-save-settings');
 
+/* Key Geoapify bawaan (bisa diganti di Pengaturan Galeri) */
+const DEFAULT_GEOAPIFY_KEY = '462c1e9d381442eb979437b1aecbef77';
+
 /* ---------------- State ---------------- */
 const state = {
   stream: null,
@@ -86,8 +89,8 @@ const state = {
   lastLocLat: null,
   lastLocLng: null,
   autoSave: false,
-  geocoder: 'osm',
-  geoapifyKey: '',
+  geocoder: 'geoapify',
+  geoapifyKey: DEFAULT_GEOAPIFY_KEY || '',
   lastGeoAt: 0,
   lastGeoLat: null,
   lastGeoLng: null,
@@ -1384,8 +1387,9 @@ window.addEventListener('pagehide', () => {
   chkMs.checked = state.showMs;
   state.autoSave = localStorage.getItem('tm_autoSave') === '1';
   chkAuto.checked = state.autoSave;
-  state.geocoder = localStorage.getItem('tm_geocoder') === 'geoapify' ? 'geoapify' : 'osm';
-  state.geoapifyKey = localStorage.getItem('tm_geoapify_key') || '';
+  state.geocoder = localStorage.getItem('tm_geocoder') || (DEFAULT_GEOAPIFY_KEY ? 'geoapify' : 'osm');
+  state.geocoder = state.geocoder === 'geoapify' ? 'geoapify' : 'osm';
+  state.geoapifyKey = localStorage.getItem('tm_geoapify_key') || DEFAULT_GEOAPIFY_KEY || '';
   selGeocoder.value = state.geocoder;
   inpGeoapifyKey.value = state.geoapifyKey;
   try {
