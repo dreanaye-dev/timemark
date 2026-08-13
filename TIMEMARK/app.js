@@ -94,6 +94,7 @@ const state = {
   lastGeoAt: 0,
   lastGeoLat: null,
   lastGeoLng: null,
+  geoInFlight: false,
 };
 
 /* ---------------- Pembantu ---------------- */
@@ -241,6 +242,7 @@ function startGeo() {
 async function reverseGeocode(lat, lng, force = false) {
   /* Batasi frekuensi agar kuota harian (Geoapify 3000/hari) tidak cepat habis:
      ulangi hanya bila >30 dtk atau bergeser >100 m, kecuali force (saat potret). */
+  if (state.geoInFlight) return;
   const now = Date.now();
   const moved = state.lastGeoLat != null
     ? haversine(state.lastGeoLat, state.lastGeoLng, lat, lng)
@@ -249,6 +251,7 @@ async function reverseGeocode(lat, lng, force = false) {
   state.lastGeoAt = now;
   state.lastGeoLat = lat;
   state.lastGeoLng = lng;
+  state.geoInFlight = true;
 
   const provider = state.geocoder;
   try {
@@ -282,6 +285,8 @@ async function reverseGeocode(lat, lng, force = false) {
     }
   } catch (e) {
     /* biarkan alamat tetap kosong */
+  } finally {
+    state.geoInFlight = false;
   }
 }
 
@@ -306,26 +311,6 @@ function geoapifyToAddress(p) {
   if (p.state) a.state = p.state;
   if (p.postcode) a.postcode = p.postcode;
   if (p.country) a.country = p.country;
-  return a;
-}
-
-/* Terjemahkan respons geocoding Mapbox ke bentuk alamat terstruktur */
-function mapboxToAddress(f) {
-  const a = {};
-  if (f.address) a.house_number = String(f.address);
-  if (f.text) a.road = f.text;
-  for (const c of f.context || []) {
-    const id = c.id || '';
-    const t = c.text;
-    if (!t) continue;
-    if (id.startsWith('neighborhood')) a.neighbourhood = t;
-    else if (id.startsWith('locality')) a.village = t;
-    else if (id.startsWith('place')) a.city = t;
-    else if (id.startsWith('district')) a.city_district = t;
-    else if (id.startsWith('postcode')) a.postcode = t;
-    else if (id.startsWith('region')) a.state = t;
-    else if (id.startsWith('country')) a.country = t;
-  }
   return a;
 }
 
@@ -685,12 +670,7 @@ async function capturePhoto() {
       return;
     }
     if (!gpsReadyForCapture()) return;
-    if (state.coords) {
-      await Promise.race([
-        reverseGeocode(state.coords.latitude, state.coords.longitude, true),
-        new Promise((r) => setTimeout(r, 4000)),
-      ]);
-    }
+    if (state.coords) reverseGeocode(state.coords.latitude, state.coords.longitude, true);
     const canvas = document.createElement('canvas');
     canvas.width = vw;
     canvas.height = vh;
@@ -744,12 +724,7 @@ async function startRecord() {
       return;
     }
     if (!gpsReadyForCapture()) return;
-    if (state.coords) {
-      await Promise.race([
-        reverseGeocode(state.coords.latitude, state.coords.longitude, true),
-        new Promise((r) => setTimeout(r, 4000)),
-      ]);
-    }
+    if (state.coords) reverseGeocode(state.coords.latitude, state.coords.longitude, true);
     if (typeof HTMLCanvasElement.prototype.captureStream !== 'function') {
       toastShow('Browser ini tidak mendukung perekaman watermark');
       return;
