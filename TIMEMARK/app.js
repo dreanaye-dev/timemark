@@ -420,13 +420,13 @@ function drawWatermark(ctx, w, h, d) {
   }
 
   /* label merek kiri atas */
-  ctx.font = `700 ${brandSize}px "Segoe UI", Roboto, sans-serif`;
+  ctx.font = `italic 600 ${brandSize}px Georgia, 'Times New Roman', serif`;
   ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-  ctx.fillText('TIMEMARK', pad, pad);
+  ctx.fillText('Daniel Alexander', pad, pad);
 
   /* garis aksen */
   ctx.fillStyle = '#ff5a3c';
-  ctx.fillRect(pad, pad + brandSize + 4, brandSize * 1.1, Math.max(2, brandSize * 0.12));
+  ctx.fillRect(pad, pad + brandSize + 4, brandSize * 1.6, Math.max(2, brandSize * 0.12));
 
   ctx.restore();
 }
