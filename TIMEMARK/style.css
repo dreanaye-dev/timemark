@@ -99,7 +99,7 @@ body {
 }
 
 #wm-clock {
-  font-size: clamp(28px, 7.5vw, 44px);
+  font-size: clamp(16px, 3.75vw, 22px);
   font-weight: 700;
   line-height: 1;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75);
