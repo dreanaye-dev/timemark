@@ -336,6 +336,38 @@ body {
 #flashfx.go { animation: flash 0.3s ease-out; }
 @keyframes flash { from { opacity: 0.9; } to { opacity: 0; } }
 
+/* ================= SETTINGS Galeri ================= */
+#settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin: 10px 12px;
+  padding: 12px;
+}
+
+#settings-panel[hidden] { display: none; }
+
+.set-row {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+#settings-panel select,
+#settings-panel input {
+  width: 100%;
+  background: var(--bg);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 14px;
+}
+
+#btn-save-settings { align-self: flex-start; }
+
 /* ================= GALERI ================= */
 .gal-header {
   display: flex;
