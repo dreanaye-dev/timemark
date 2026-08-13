@@ -99,7 +99,18 @@
         <span>Auto-Simpan</span>
         <input type="checkbox" id="chk-autosave">
       </label>
+      <button id="btn-settings" class="tool-btn">Pengaturan</button>
     </nav>
+    <section id="settings-panel" hidden>
+      <label class="set-row" for="sel-geocoder">Geocoder alamat</label>
+      <select id="sel-geocoder">
+        <option value="osm">OpenStreetMap (gratis tanpa key)</option>
+        <option value="mapbox">Mapbox (lebih lengkap, perlu token)</option>
+      </select>
+      <label class="set-row" id="lbl-token" for="inp-mapbox-token">Mapbox access token</label>
+      <input id="inp-mapbox-token" type="password" placeholder="pk.eyJ..." autocomplete="off">
+      <button id="btn-save-settings" class="tool-btn">Simpan Pengaturan</button>
+    </section>
     <section id="gallery-grid"></section>
     <p id="gallery-empty" hidden>Belum ada hasil. Ambil foto atau rekam video dari kamera.</p>
     <p id="gallery-error" hidden>Gagal memuat galeri.</p>
