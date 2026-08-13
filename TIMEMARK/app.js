@@ -454,7 +454,7 @@ function checkFlashSupport() {
 function drawWatermark(ctx, w, h, d) {
   const pad = Math.round(w * 0.02);
   const brandSize = Math.max(10, Math.round(w * 0.028));
-  const timeSize = Math.round(h * 0.085);
+  const timeSize = Math.round(h * 0.042);
   const subSize = Math.max(11, Math.round(w * 0.02));
 
   ctx.save();
