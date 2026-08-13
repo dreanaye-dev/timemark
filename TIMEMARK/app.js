@@ -94,16 +94,20 @@ function shortAddress(full) {
 function formatFullAddress(data) {
   const a = data.address || {};
   const parts = [];
+  if (a.house_number && !isNaN(+a.house_number)) parts.push(`No. ${a.house_number}`);
   if (a.road) parts.push(a.road);
-  if (a.suburb) parts.push(a.suburb);
-  else if (a.neighbourhood) parts.push(a.neighbourhood);
+  if (a.neighbourhood) parts.push(a.neighbourhood);
+  else if (a.suburb) parts.push(a.suburb);
   else if (a.quarter) parts.push(a.quarter);
+  else if (a.hamlet || a.isolated_dwelling) parts.push(a.hamlet || a.isolated_dwelling);
   else if (a.city_district) parts.push(a.city_district);
   else if (a.district) parts.push(a.district);
   const area = a.city || a.town || a.village || a.municipality;
   if (area) parts.push(area);
-  if (a.state_district && a.state_district !== area) parts.push(a.state_district);
-  if (a.state && a.state !== a.state_district) parts.push(a.state);
+  const countyLike = a.county || a.state_district;
+  if (countyLike && countyLike !== area) parts.push(countyLike);
+  if (a.region && a.region !== countyLike && a.region !== area) parts.push(a.region);
+  if (a.state && a.state !== countyLike && a.state !== a.region) parts.push(a.state);
   if (a.postcode) parts.push(a.postcode);
   if (a.country && String(a.country).toLowerCase() !== 'indonesia') parts.push(a.country);
   const seen = new Set();
