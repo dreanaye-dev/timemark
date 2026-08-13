@@ -57,6 +57,11 @@ const historyEmpty = $('history-empty');
 const btnExportLocsCsv = $('btn-export-locs-csv');
 const btnExportLocsJson = $('btn-export-locs-json');
 const modalExport = $('modal-export');
+const btnSettings = $('btn-settings');
+const settingsPanel = $('settings-panel');
+const selGeocoder = $('sel-geocoder');
+const inpMapboxToken = $('inp-mapbox-token');
+const btnSaveSettings = $('btn-save-settings');
 
 /* ---------------- State ---------------- */
 const state = {
@@ -81,6 +86,8 @@ const state = {
   lastLocLat: null,
   lastLocLng: null,
   autoSave: false,
+  geocoder: 'osm',
+  mapboxToken: '',
 };
 
 /* ---------------- Pembantu ---------------- */
@@ -226,7 +233,26 @@ function startGeo() {
 }
 
 async function reverseGeocode(lat, lng) {
+  const provider = state.geocoder;
   try {
+    if (provider === 'mapbox' && state.mapboxToken) {
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${encodeURIComponent(state.mapboxToken)}&limit=1&language=id`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('mapbox fail');
+      const data = await res.json();
+      const f = data && data.features && data.features[0];
+      if (f) {
+        const addr = mapboxToAddress(f);
+        const built = formatFullAddress({ address: addr });
+        state.address = built && built !== 'Lokasi tidak ditemukan' ? built : f.place_name;
+        const short = shortAddress(f.place_name || state.address);
+        if (short) state.addressShort = short;
+        updateOverlay();
+        return;
+      }
+      throw new Error('mapbox empty');
+    }
+    /* fallback: Nominatim (OSM) */
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=id&zoom=18`;
     const res = await fetch(url, { headers: { 'Accept-Language': 'id' } });
     if (!res.ok) throw new Error('geo fail');
@@ -240,6 +266,26 @@ async function reverseGeocode(lat, lng) {
   } catch (e) {
     /* biarkan alamat tetap kosong */
   }
+}
+
+/* Terjemahkan respons geocoding Mapbox ke bentuk alamat terstruktur */
+function mapboxToAddress(f) {
+  const a = {};
+  if (f.address) a.house_number = String(f.address);
+  if (f.text) a.road = f.text;
+  for (const c of f.context || []) {
+    const id = c.id || '';
+    const t = c.text;
+    if (!t) continue;
+    if (id.startsWith('neighborhood')) a.neighbourhood = t;
+    else if (id.startsWith('locality')) a.village = t;
+    else if (id.startsWith('place')) a.city = t;
+    else if (id.startsWith('district')) a.city_district = t;
+    else if (id.startsWith('postcode')) a.postcode = t;
+    else if (id.startsWith('region')) a.state = t;
+    else if (id.startsWith('country')) a.country = t;
+  }
+  return a;
 }
 
 /* Riwayat lokasi: simpan titik GPS baru bila bergeser jauh / jeda waktu cukup */
@@ -1250,6 +1296,22 @@ chkAuto.addEventListener('change', () => {
   toastShow(state.autoSave ? 'Auto-Simpan ke HP aktif' : 'Auto-Simpan ke HP nonaktif');
 });
 
+btnSettings.addEventListener('click', () => {
+  settingsPanel.hidden = !settingsPanel.hidden;
+});
+
+btnSaveSettings.addEventListener('click', () => {
+  state.geocoder = selGeocoder.value;
+  state.mapboxToken = inpMapboxToken.value.trim();
+  localStorage.setItem('tm_geocoder', state.geocoder);
+  localStorage.setItem('tm_mapbox_token', state.mapboxToken);
+  settingsPanel.hidden = true;
+  toastShow(state.geocoder === 'mapbox'
+    ? (state.mapboxToken ? 'Geocoder: Mapbox aktif' : 'Token kosong, tetap pakai OSM')
+    : 'Geocoder: OpenStreetMap');
+  if (state.coords) reverseGeocode(state.coords.latitude, state.coords.longitude);
+});
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !modal.hidden) closeModal();
 });
@@ -1272,6 +1334,10 @@ window.addEventListener('pagehide', () => {
   chkMs.checked = state.showMs;
   state.autoSave = localStorage.getItem('tm_autoSave') === '1';
   chkAuto.checked = state.autoSave;
+  state.geocoder = localStorage.getItem('tm_geocoder') === 'mapbox' ? 'mapbox' : 'osm';
+  state.mapboxToken = localStorage.getItem('tm_mapbox_token') || '';
+  selGeocoder.value = state.geocoder;
+  inpMapboxToken.value = state.mapboxToken;
   try {
     await renderGallery();
   } catch (e) {
